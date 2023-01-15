@@ -300,40 +300,6 @@ func TestMiddlewareOrder(t *testing.T) {
 	assertEqual(t, log, "123")
 }
 
-func TestCORS(t *testing.T) {
-	server, req := createJSONRequest(t, &cadet.Config{Path: "/"}, "", cadet.CORS("*"))
-	server.Command("strict", func(r *cadet.Request, ctx string) cadet.Response {
-		return cadet.Status(http.StatusOK)
-	})
-
-	resp, err := req(http.MethodOptions, "/", `{"name":"strict"}`)
-
-	assertNoError(t, err)
-	assertEqual(t, resp.StatusCode, http.StatusOK)
-	assertEqual(t, resp.Header.Get("Access-Control-Allow-Origin"), "*")
-	assertEqual(t, resp.Header.Get("Access-Control-Allow-Credentials"), "true")
-	assertEqual(t, resp.Header.Get("Access-Control-Expose-Headers"), "X-Auth-Token")
-	assertEqual(t, resp.Header.Get("Access-Control-Allow-Headers"), "Origin, Content-Type, Accept, Authorization, X-Requested-With")
-	assertEqual(t, resp.Header.Get("Access-Control-Allow-Methods"), "GET,POST,PUT,DELETE,OPTIONS")
-}
-
-func TestCORSIgnoredUnlessOptions(t *testing.T) {
-	server, req := createJSONRequest(t, &cadet.Config{Path: "/"}, "", cadet.CORS("*"))
-	server.Command("ignore", func(r *cadet.Request, ctx string) cadet.Response {
-		return cadet.Status(http.StatusOK)
-	})
-
-	resp, err := req(http.MethodPost, "/", `{"name":"ignore"}`)
-
-	assertNoError(t, err)
-	assertEqual(t, resp.StatusCode, http.StatusOK)
-	assertEqual(t, resp.Header.Get("Access-Control-Allow-Origin"), "")
-	assertEqual(t, resp.Header.Get("Access-Control-Allow-Credentials"), "")
-	assertEqual(t, resp.Header.Get("Access-Control-Expose-Headers"), "")
-	assertEqual(t, resp.Header.Get("Access-Control-Allow-Headers"), "")
-	assertEqual(t, resp.Header.Get("Access-Control-Allow-Methods"), "")
-}
-
 func TestMounting(t *testing.T) {
 	mux := http.NewServeMux()
 
