@@ -407,6 +407,19 @@ func TestAddCommands(t *testing.T) {
 	assertError(t, err)
 }
 
+func TestRequestGetCommandName(t *testing.T) {
+	server, req := createJSONRequest(t, &cadet.Config{}, "")
+	server.Command("cmdname", func(r *cadet.Request, ctx string) cadet.Response {
+		assertEqual(t, r.GetCommandName(), "cmdname")
+		return cadet.Status(http.StatusOK)
+	})
+
+	resp, err := req(http.MethodPost, "/", `{"name":"cmdname"}`)
+
+	assertNoError(t, err)
+	assertEqual(t, resp.StatusCode, http.StatusOK)
+}
+
 func TestRequestReadCommand(t *testing.T) {
 	type Data struct {
 		Foo string `json:"foo"`

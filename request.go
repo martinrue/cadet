@@ -11,6 +11,10 @@ type Request struct {
 	RawRequest  *http.Request
 }
 
+func (c *Request) GetCommandName() string {
+	return c.command.Name
+}
+
 func (c *Request) ReadCommand(obj any) error {
 	return json.Unmarshal(c.command.Data, obj)
 }
