@@ -84,6 +84,24 @@ func main() {
 }
 ```
 
+### Infer command names
+
+Pass in only handler functions and cadet infer the respective command names. A handler function called `MyCommand1` will be registered for the command name `my-command-1`.
+
+```go
+func main() {
+	server := cadet.NewServer(/* ... */)
+
+	server.Commands(
+		commands.UserSignIn,    // cadet will infer the command name `user-sign-in`
+		commands.UserDelete,    // cadet will infer the command name `user-delete`
+		commands.UserSetEmail,  // cadet will infer the command name `user-set-email`
+	)
+
+	server.Start();
+}
+```
+
 ### Type-safe dependencies
 
 Pass in custom dependencies when creating your server and when a command handler is called it'll have full access to those dependencies in a type-safe way.

@@ -384,7 +384,7 @@ func TestMultipleCommands(t *testing.T) {
 	assertEqual(t, resp.StatusCode, http.StatusNonAuthoritativeInfo)
 }
 
-func TestAddCommands(t *testing.T) {
+func TestInvalidCommands(t *testing.T) {
 	server, _ := createJSONRequest(t, &cadet.Config{Path: "/"}, "")
 
 	handler := func(r *cadet.Request, ctx string) cadet.Response {
@@ -397,14 +397,79 @@ func TestAddCommands(t *testing.T) {
 	err = server.Commands("cmd")
 	assertError(t, err)
 
-	err = server.Commands(handler, handler)
-	assertError(t, err)
-
 	err = server.Commands("cmd", "handler")
 	assertError(t, err)
 
 	err = server.Commands("cmd1", handler, "cmd2")
 	assertError(t, err)
+}
+
+func EntityAdd1(r *cadet.Request, ctx string) cadet.Response   { return cadet.Status(200) }
+func EntityAdd2(r *cadet.Request, ctx string) cadet.Response   { return cadet.Status(201) }
+func entityAdd(r *cadet.Request, ctx string) cadet.Response    { return cadet.Status(202) }
+func entityadd(r *cadet.Request, ctx string) cadet.Response    { return cadet.Status(203) }
+func ENTITYDELETE(r *cadet.Request, ctx string) cadet.Response { return cadet.Status(204) }
+func A1(r *cadet.Request, ctx string) cadet.Response           { return cadet.Status(205) }
+func A(r *cadet.Request, ctx string) cadet.Response            { return cadet.Status(206) }
+
+func TestCommandsWithInfer(t *testing.T) {
+	server, req := createJSONRequest(t, &cadet.Config{}, "")
+	server.Commands(EntityAdd1, EntityAdd2, entityAdd, entityadd, ENTITYDELETE, A1, A)
+
+	resp, err := req(http.MethodPost, "/", `{"name":"entity-add-1"}`)
+	assertNoError(t, err)
+	assertEqual(t, resp.StatusCode, 200)
+
+	resp, err = req(http.MethodPost, "/", `{"name":"entity-add-2"}`)
+	assertNoError(t, err)
+	assertEqual(t, resp.StatusCode, 201)
+
+	resp, err = req(http.MethodPost, "/", `{"name":"entity-add"}`)
+	assertNoError(t, err)
+	assertEqual(t, resp.StatusCode, 202)
+
+	resp, err = req(http.MethodPost, "/", `{"name":"entityadd"}`)
+	assertNoError(t, err)
+	assertEqual(t, resp.StatusCode, 203)
+
+	resp, err = req(http.MethodPost, "/", `{"name":"entitydelete"}`)
+	assertNoError(t, err)
+	assertEqual(t, resp.StatusCode, 204)
+
+	resp, err = req(http.MethodPost, "/", `{"name":"a-1"}`)
+	assertNoError(t, err)
+	assertEqual(t, resp.StatusCode, 205)
+
+	resp, err = req(http.MethodPost, "/", `{"name":"a"}`)
+	assertNoError(t, err)
+	assertEqual(t, resp.StatusCode, 206)
+}
+
+func TestCommandsWithMap(t *testing.T) {
+	server, req := createJSONRequest(t, &cadet.Config{}, "")
+
+	handler1 := func(r *cadet.Request, ctx string) cadet.Response {
+		return cadet.Status(http.StatusOK)
+	}
+
+	handler2 := func(r *cadet.Request, ctx string) cadet.Response {
+		return cadet.Status(http.StatusCreated)
+	}
+
+	cmds := map[string]func(r *cadet.Request, context string) cadet.Response{
+		"cmd-1": handler1,
+		"cmd-2": handler2,
+	}
+
+	server.Commands(cmds)
+
+	resp, err := req(http.MethodPost, "/", `{"name":"cmd-1"}`)
+	assertNoError(t, err)
+	assertEqual(t, resp.StatusCode, http.StatusOK)
+
+	resp, err = req(http.MethodPost, "/", `{"name":"cmd-2"}`)
+	assertNoError(t, err)
+	assertEqual(t, resp.StatusCode, http.StatusCreated)
 }
 
 func TestRequestGetCommandName(t *testing.T) {

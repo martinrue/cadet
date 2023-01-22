@@ -6,8 +6,12 @@ import (
 	"errors"
 	"io"
 	"net/http"
+	"reflect"
+	"regexp"
+	"runtime"
 	"strings"
 	"time"
+	"unicode"
 )
 
 type ContentType int
@@ -84,6 +88,18 @@ func (s *Server[T]) Command(name string, handler func(r *Request, context T) Res
 }
 
 func (s *Server[T]) Commands(args ...any) error {
+	if s.inferFromHandlers(args...) {
+		return nil
+	}
+
+	if len(args) == 1 {
+		handlers, ok := args[0].(map[string]func(*Request, T) Response)
+		if ok {
+			s.handlers = handlers
+			return nil
+		}
+	}
+
 	if len(args) == 0 || len(args)%2 != 0 {
 		return errors.New("args must be pairs of command names and handlers")
 	}
@@ -131,6 +147,48 @@ func (s *Server[T]) Start() error {
 
 func (s *Server[T]) Stop(ctx context.Context) error {
 	return s.httpServer.Shutdown(ctx)
+}
+
+func (s *Server[T]) inferFromHandlers(args ...any) bool {
+	containsLower := func(str string) bool {
+		matched, _ := regexp.MatchString("[a-z0-9]", str)
+		return matched
+	}
+
+	inferCommandName := func(name string) string {
+		if !containsLower(name) {
+			return strings.ToLower(name)
+		}
+
+		cmd := ""
+
+		for _, char := range name {
+			if unicode.IsUpper(char) || unicode.IsNumber(char) {
+				cmd += " "
+			}
+
+			cmd += string(char)
+		}
+
+		return strings.ToLower(strings.ReplaceAll(strings.TrimSpace(cmd), " ", "-"))
+	}
+
+	if len(args) == 0 {
+		return false
+	}
+
+	for _, arg := range args {
+		handler, isHandler := arg.(func(*Request, T) Response)
+		if !isHandler {
+			return false
+		}
+
+		segments := strings.Split(runtime.FuncForPC(reflect.ValueOf(handler).Pointer()).Name(), ".")
+		name := segments[len(segments)-1]
+		s.Command(inferCommandName(name), handler)
+	}
+
+	return true
 }
 
 func (s *Server[T]) getContentType(r *http.Request) ContentType {
