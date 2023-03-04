@@ -32,7 +32,7 @@ type EchoResponse struct {
 func EchoHandler(r *cadet.Request, em *EchoMaker) cadet.Response {
 	cmd := &EchoCommand{}
 
-	if err := r.ReadCommand(&cmd); err != nil {
+	if err := r.ReadCommand(cmd); err != nil {
 		return cadet.Status(http.StatusUnprocessableEntity)
 	}
 
@@ -136,7 +136,7 @@ type EchoCommand struct {
 func EchoHandler(r *cadet.Request, db *Database) cadet.Response {
 	cmd := &EchoCommand{}
 
-	if err := r.ReadCommand(&cmd); err != nil {
+	if err := r.ReadCommand(cmd); err != nil {
 		return cadet.Status(http.StatusUnprocessableEntity)
 	}
 
