@@ -41,7 +41,13 @@ func EchoHandler(r *cadet.Request, em *EchoMaker) cadet.Response {
 }
 
 func main() {
-	server := cadet.NewServer(&cadet.Config{Bind: ":1234"}, &EchoMaker{})
+	server := cadet.NewServer(&cadet.Config{
+		Bind: ":1234",
+		Server: &cadet.ServerConfig{
+			ReadTimeout:  25 * time.Second,
+			WriteTimeout: 0,
+		},
+	}, &EchoMaker{})
 
 	err := server.Commands(
 		"echo", EchoHandler,
