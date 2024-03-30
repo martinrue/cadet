@@ -22,9 +22,15 @@ const (
 	ContentTypeJSON
 )
 
+type ServerConfig struct {
+	ReadTimeout  time.Duration
+	WriteTimeout time.Duration
+}
+
 type Config struct {
-	Bind string
-	Path string
+	Bind   string
+	Path   string
+	Server *ServerConfig
 }
 
 type Middleware func(http.HandlerFunc) http.HandlerFunc
@@ -49,16 +55,23 @@ func NewServer[T any](config *Config, context T) *Server[T] {
 
 	mux := http.NewServeMux()
 
+	httpServer := &http.Server{
+		Addr:         config.Bind,
+		Handler:      mux,
+		ReadTimeout:  5 * time.Second,
+		WriteTimeout: 10 * time.Second,
+	}
+
+	if config.Server != nil {
+		httpServer.ReadTimeout = config.Server.ReadTimeout
+		httpServer.WriteTimeout = config.Server.WriteTimeout
+	}
+
 	server := &Server[T]{
-		httpServer: &http.Server{
-			Addr:         config.Bind,
-			Handler:      mux,
-			ReadTimeout:  5 * time.Second,
-			WriteTimeout: 10 * time.Second,
-		},
-		handlers: make(map[string]func(*Request, T) Response),
-		path:     config.Path,
-		context:  context,
+		httpServer: httpServer,
+		handlers:   make(map[string]func(*Request, T) Response),
+		path:       config.Path,
+		context:    context,
 	}
 
 	mux.HandleFunc(config.Path, server.withStrictPath()(server.executeHandler))
